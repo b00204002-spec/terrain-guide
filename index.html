@@ -1,0 +1,420 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Blender 實景地形匯出至 Rhino｜完整操作指南</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Noto+Sans+TC:wght@400;500;700&family=Noto+Serif+TC:wght@600;900&display=swap" rel="stylesheet">
+<style>
+:root{
+  --paper:#EDF1EC;
+  --panel:#F8FAF6;
+  --ink:#1D3336;
+  --ink-soft:#4B6264;
+  --contour:#7FA38A;
+  --contour-faint:#C9D8CC;
+  --line:#CBD6CD;
+  --blender:#D96A0B;
+  --rhino:#2F6FA3;
+  --google:#3C8D54;
+  --warn-bg:#FFF4CC;
+  --warn-ink:#6B4E00;
+  --warn-line:#E4B92E;
+  --kbd-bg:#FFFFFF;
+  --done:#3C8D54;
+  --serif:"Noto Serif TC","Songti TC","PMingLiU",serif;
+  --sans:"Noto Sans TC","PingFang TC","Microsoft JhengHei",system-ui,sans-serif;
+}
+@media (prefers-color-scheme: dark){
+  :root:not([data-theme="light"]){
+    --paper:#142224;--panel:#1B2C2F;--ink:#E4ECE6;--ink-soft:#A4B8B2;
+    --contour:#5E8C6A;--contour-faint:#2A3E3F;--line:#2F4447;
+    --blender:#F29A4A;--rhino:#7DB3E0;--google:#79C28E;
+    --warn-bg:#3A3212;--warn-ink:#F3DC8A;--warn-line:#B89422;--kbd-bg:#253A3D;--done:#79C28E;
+  }
+}
+:root[data-theme="dark"]{
+  --paper:#142224;--panel:#1B2C2F;--ink:#E4ECE6;--ink-soft:#A4B8B2;
+  --contour:#5E8C6A;--contour-faint:#2A3E3F;--line:#2F4447;
+  --blender:#F29A4A;--rhino:#7DB3E0;--google:#79C28E;
+  --warn-bg:#3A3212;--warn-ink:#F3DC8A;--warn-line:#B89422;--kbd-bg:#253A3D;--done:#79C28E;
+}
+*{box-sizing:border-box}
+html{scroll-behavior:smooth}
+@media (prefers-reduced-motion: reduce){html{scroll-behavior:auto}*{transition:none!important;animation:none!important}}
+body{margin:0;background:var(--paper);color:var(--ink);font-family:var(--sans);font-size:16px;line-height:1.8;overflow-x:hidden}
+a{color:var(--rhino);text-underline-offset:3px}
+a:focus-visible,button:focus-visible,input:focus-visible,summary:focus-visible{outline:3px solid var(--blender);outline-offset:2px;border-radius:4px}
+img,svg{max-width:100%}
+
+/* hero */
+.hero{position:relative;overflow:hidden;border-bottom:1px solid var(--line);padding:clamp(3rem,8vw,6rem) clamp(1.25rem,5vw,4rem) clamp(2.5rem,6vw,4.5rem)}
+.hero svg.topo{position:absolute;inset:0;width:100%;height:100%;z-index:0}
+.topo path{fill:none;stroke:var(--contour);stroke-width:1.1;opacity:.55}
+.topo path.major{stroke-width:2;opacity:.8}
+.topo path{stroke-dasharray:2400;stroke-dashoffset:2400;animation:draw 2.6s ease-out forwards}
+.topo path:nth-child(2n){animation-delay:.15s}
+.topo path:nth-child(3n){animation-delay:.3s}
+@keyframes draw{to{stroke-dashoffset:0}}
+.hero-inner{position:relative;z-index:1;max-width:46rem}
+.hero .route{display:flex;flex-wrap:wrap;gap:.5rem;align-items:center;margin:0 0 1.5rem;font-weight:500;color:var(--ink-soft)}
+.pill{display:inline-flex;align-items:center;gap:.4rem;padding:.2rem .75rem;border-radius:999px;background:var(--panel);border:1px solid var(--line);font-size:.9rem;color:var(--ink)}
+.pill::before{content:"";width:.55rem;height:.55rem;border-radius:50%;background:currentColor}
+.pill.b{color:var(--blender)} .pill.g{color:var(--google)} .pill.r{color:var(--rhino)}
+.pill span{color:var(--ink)}
+.hero h1{font-family:var(--serif);font-weight:900;font-size:clamp(2.1rem,5.5vw,3.6rem);line-height:1.2;margin:0 0 1rem;letter-spacing:.02em}
+.hero p.lede{font-size:1.1rem;max-width:36rem;margin:0;color:var(--ink-soft)}
+
+/* layout */
+.layout{display:grid;grid-template-columns:17rem minmax(0,1fr);gap:clamp(1.5rem,4vw,3.5rem);max-width:78rem;margin:0 auto;padding:2.5rem clamp(1.25rem,4vw,3rem) 5rem}
+@media (max-width:900px){.layout{grid-template-columns:1fr}}
+aside.toc{position:sticky;top:1.5rem;align-self:start}
+@media (max-width:900px){aside.toc{position:static}}
+.toc h2{font-family:var(--serif);font-size:1.05rem;margin:0 0 .75rem}
+.progress{height:6px;background:var(--contour-faint);border-radius:3px;overflow:hidden;margin-bottom:.4rem}
+.progress div{height:100%;width:0;background:var(--done);transition:width .3s}
+.progress-text{font-size:.85rem;color:var(--ink-soft);margin-bottom:1rem}
+.toc ol{list-style:none;padding:0;margin:0;border-left:2px solid var(--line)}
+.toc li a{display:flex;gap:.6rem;padding:.35rem .75rem;text-decoration:none;color:var(--ink-soft);font-size:.93rem;line-height:1.5;margin-left:-2px;border-left:2px solid transparent}
+.toc li a:hover{color:var(--ink);border-left-color:var(--contour)}
+.toc li a .n{font-variant-numeric:tabular-nums;font-weight:700;min-width:1.2rem;color:var(--ink)}
+.toc li a.done .n{color:var(--done)}
+.toc li a.done .n::after{content:" ✓"}
+.toc .extra a{font-weight:500}
+.reset{margin-top:1rem;background:none;border:1px solid var(--line);color:var(--ink-soft);font:inherit;font-size:.85rem;padding:.3rem .8rem;border-radius:6px;cursor:pointer}
+.reset:hover{color:var(--ink);border-color:var(--ink-soft)}
+
+main{min-width:0;max-width:48rem}
+main > section{margin-bottom:3.5rem;scroll-margin-top:1rem}
+h2.sec{font-family:var(--serif);font-weight:900;font-size:1.7rem;margin:0 0 1rem;line-height:1.35}
+
+/* downloads */
+.dl{display:grid;grid-template-columns:repeat(auto-fit,minmax(14rem,1fr));gap:.75rem;margin:0;padding:0;list-style:none}
+.dl a{display:block;padding:.9rem 1rem;background:var(--panel);border:1px solid var(--line);border-left:4px solid var(--c,var(--contour));border-radius:6px;text-decoration:none;color:var(--ink);height:100%}
+.dl a:hover{border-color:var(--c)}
+.dl strong{display:block;font-size:1rem}
+.dl small{display:block;color:var(--ink-soft);font-size:.85rem;line-height:1.5;margin-top:.2rem}
+.need{margin:1.25rem 0 0;padding:1rem 1.25rem;background:var(--panel);border:1px solid var(--line);border-radius:6px}
+.need ul{margin:.25rem 0 0;padding-left:1.2rem}
+
+/* steps */
+.step{position:relative;padding-left:4.25rem}
+@media (max-width:560px){.step{padding-left:0}}
+.step-num{position:absolute;left:0;top:-.2rem;font-family:var(--serif);font-weight:900;font-size:2.8rem;line-height:1;color:var(--contour)}
+@media (max-width:560px){.step-num{position:static;display:block;margin-bottom:.25rem}}
+.step.is-done .step-num{color:var(--done)}
+.step-head{display:flex;flex-wrap:wrap;align-items:baseline;gap:.5rem 1rem;margin-bottom:.25rem}
+.step-head h2{font-family:var(--serif);font-weight:900;font-size:1.55rem;margin:0;line-height:1.35}
+.tag{font-size:.8rem;font-weight:700;padding:.05rem .6rem;border-radius:4px;border:1.5px solid currentColor}
+.tag.b{color:var(--blender)} .tag.g{color:var(--google)} .tag.r{color:var(--rhino)}
+.goal{color:var(--ink-soft);margin:0 0 1rem}
+.step ol.do{margin:0 0 1rem;padding-left:1.3rem}
+.step ol.do li{margin-bottom:.45rem;padding-left:.2rem}
+.path{font-weight:500;background:var(--panel);border:1px solid var(--line);border-radius:4px;padding:0 .35rem;white-space:nowrap}
+kbd{font-family:var(--sans);font-size:.85em;font-weight:700;background:var(--kbd-bg);border:1px solid var(--line);border-bottom-width:3px;border-radius:5px;padding:.05rem .45rem}
+code{font-family:"SFMono-Regular",Consolas,monospace;font-size:.9em;background:var(--panel);border:1px solid var(--line);border-radius:4px;padding:.05rem .35rem}
+.settings{width:100%;border-collapse:collapse;margin:.5rem 0 1rem;font-size:.95rem}
+.table-wrap{overflow-x:auto}
+.settings th,.settings td{text-align:left;padding:.45rem .75rem;border-bottom:1px solid var(--line);vertical-align:top}
+.settings th{font-weight:700;color:var(--ink-soft);font-size:.85rem}
+.settings td:last-child{font-weight:700}
+.note{border-left:3px solid var(--contour);padding:.25rem 0 .25rem 1rem;margin:0 0 1rem;color:var(--ink-soft);font-size:.95rem}
+.note strong{color:var(--ink)}
+.check-row{display:flex;align-items:center;gap:.6rem;margin-top:.5rem;padding:.6rem .9rem;border:1px dashed var(--line);border-radius:6px;cursor:pointer;font-weight:500;user-select:none}
+.check-row input{width:1.15rem;height:1.15rem;accent-color:var(--done);cursor:pointer}
+.step.is-done .check-row{border-style:solid;border-color:var(--done);color:var(--done)}
+.links{display:flex;flex-wrap:wrap;gap:.5rem 1.25rem;margin:0 0 1rem;font-size:.95rem}
+
+/* warning */
+.warning{background:var(--warn-bg);color:var(--warn-ink);border:2px solid var(--warn-line);border-radius:8px;padding:1.25rem 1.5rem;margin-bottom:3.5rem}
+.warning h2{font-family:var(--serif);font-weight:900;font-size:1.4rem;margin:0 0 .5rem;display:flex;gap:.6rem;align-items:center}
+.warning p{margin:.4rem 0}
+.warning code{background:transparent;border-color:var(--warn-line);color:inherit}
+
+/* troubleshooting */
+details{border-bottom:1px solid var(--line);padding:.75rem 0}
+summary{cursor:pointer;font-weight:700;list-style:none;display:flex;justify-content:space-between;gap:1rem}
+summary::-webkit-details-marker{display:none}
+summary::after{content:"＋";color:var(--ink-soft);flex-shrink:0}
+details[open] summary::after{content:"－"}
+details p{margin:.5rem 0 0;color:var(--ink-soft)}
+footer{border-top:1px solid var(--line);padding:1.5rem clamp(1.25rem,4vw,3rem);font-size:.85rem;color:var(--ink-soft);text-align:center}
+</style>
+</head>
+<body>
+
+<header class="hero">
+  <svg class="topo" viewBox="0 0 1200 420" preserveAspectRatio="xMidYMid slice" aria-hidden="true">
+    <path class="major" d="M-20 380 C160 330 260 360 380 300 S600 180 760 230 1000 330 1220 260"/>
+    <path d="M-20 350 C150 300 250 320 370 265 S590 150 760 200 1010 300 1220 225"/>
+    <path d="M-20 320 C140 270 240 285 360 232 S585 122 765 172 1020 268 1220 192"/>
+    <path d="M-20 290 C130 240 230 250 350 200 S580 96 770 146 1030 238 1220 160"/>
+    <path class="major" d="M-20 258 C120 210 222 216 342 170 S578 72 776 122 1040 208 1220 128"/>
+    <path d="M820 130 C880 90 960 96 990 130 S950 190 880 186 780 160 820 130"/>
+    <path d="M850 132 C890 108 940 112 958 134 S930 170 888 168 826 152 850 132"/>
+    <path d="M-20 226 C110 180 214 182 336 140 S580 50 784 98 1050 180 1220 98"/>
+    <path d="M-20 194 C100 150 206 150 330 112 S584 30 794 76 1060 152 1220 70"/>
+    <path d="M-20 162 C90 120 198 118 326 86 S590 12 806 56 1070 126 1220 44"/>
+  </svg>
+  <div class="hero-inner">
+    <p class="route"><span class="pill b"><span>Blender</span></span>＋<span class="pill g"><span>Google 3D Tiles</span></span>→<span class="pill r"><span>Rhino</span></span></p>
+    <h1>把真實城市，<br>搬進你的 Rhino 基地模</h1>
+    <p class="lede">從安裝軟體、抓取 Google 實景 3D，到匯出、修網格、貼回衛星材質的完整流程。每完成一步可勾選，進度會記在這台電腦的瀏覽器裡。</p>
+  </div>
+</header>
+
+<div class="layout">
+  <aside class="toc" aria-label="目錄">
+    <h2>操作進度</h2>
+    <div class="progress" role="progressbar" aria-valuemin="0" aria-valuemax="8" aria-valuenow="0" id="bar"><div></div></div>
+    <div class="progress-text" id="barText">已完成 0 / 8 步</div>
+    <ol>
+      <li class="extra"><a href="#prep"><span class="n">·</span>下載與事前準備</a></li>
+      <li><a href="#s1" data-step="1"><span class="n">1</span>安裝 Blender</a></li>
+      <li><a href="#s2" data-step="2"><span class="n">2</span>安裝 Blosm 外掛</a></li>
+      <li><a href="#s3" data-step="3"><span class="n">3</span>綁定 Google API 金鑰</a></li>
+      <li><a href="#s4" data-step="4"><span class="n">4</span>匯入地圖與修正裁切</a></li>
+      <li><a href="#s5" data-step="5"><span class="n">5</span>固化網格與提取材質</a></li>
+      <li><a href="#s6" data-step="6"><span class="n">6</span>匯出 OBJ / FBX</a></li>
+      <li class="extra"><a href="#origin"><span class="n">!</span>極遠座標警告</a></li>
+      <li><a href="#s7" data-step="7"><span class="n">7</span>Rhino 匯入與修復</a></li>
+      <li><a href="#s8" data-step="8"><span class="n">8</span>貼回實景材質</a></li>
+      <li class="extra"><a href="#faq"><span class="n">?</span>常見問題排除</a></li>
+    </ol>
+    <button class="reset" id="reset" type="button">清除勾選進度</button>
+  </aside>
+
+  <main>
+    <section id="prep">
+      <h2 class="sec">下載與事前準備</h2>
+      <ul class="dl">
+        <li><a style="--c:var(--blender)" href="https://www.blender.org/download/" target="_blank" rel="noopener"><strong>Blender 官方下載</strong><small>免費開源，建議使用最新穩定版（至少 4.3.2 以上）</small></a></li>
+        <li><a style="--c:var(--blender)" href="https://prochitecture.gumroad.com/l/blender-osm" target="_blank" rel="noopener"><strong>Blosm for Blender（Gumroad）</strong><small>價格欄可填 0 免費下載 zip 檔</small></a></li>
+        <li><a style="--c:var(--google)" href="https://console.cloud.google.com/apis/library/tile.googleapis.com" target="_blank" rel="noopener"><strong>Google Map Tiles API</strong><small>在 Google Cloud Console 啟用並建立金鑰</small></a></li>
+        <li><a style="--c:var(--rhino)" href="https://www.rhino3d.com/download/" target="_blank" rel="noopener"><strong>Rhino 下載</strong><small>官方下載頁，另有 90 天試用版</small></a></li>
+        <li><a style="--c:var(--contour)" href="https://github.com/vvoovv/blosm/wiki/Import-of-3D-Tiles" target="_blank" rel="noopener"><strong>Blosm 官方說明：3D Tiles</strong><small>參數說明與材質匯出的官方文件</small></a></li>
+        <li><a style="--c:var(--contour)" href="https://developers.google.com/maps/documentation/tile/3d-tiles" target="_blank" rel="noopener"><strong>Google Photorealistic 3D Tiles 文件</strong><small>API 用量、計費與使用條款</small></a></li>
+      </ul>
+      <div class="need">
+        <strong>開始前請先確認</strong>
+        <ul>
+          <li>一張可綁定 Google Cloud 計費帳戶的信用卡（有免費額度，但申請金鑰時必須綁卡）。</li>
+          <li>穩定的網路，且未被公司防火牆或 VPN 擋住 <code>tile.googleapis.com</code>。</li>
+          <li>足夠的硬碟空間與記憶體：大範圍、高精度的地形動輒數百萬面。</li>
+        </ul>
+      </div>
+    </section>
+
+    <section class="step" id="s1" data-step="1">
+      <span class="step-num" aria-hidden="true">1</span>
+      <div class="step-head"><h2>下載與安裝 Blender</h2><span class="tag b">Blender</span></div>
+      <p class="goal">基礎環境準備。</p>
+      <ol class="do">
+        <li>前往 <a href="https://www.blender.org/download/" target="_blank" rel="noopener">blender.org</a> 下載最新穩定版安裝檔，一路點「下一步」完成安裝。</li>
+        <li>開啟 Blender，在啟動畫面選擇 <span class="path">General（一般）</span> 建立新專案。</li>
+        <li>滑鼠移到 3D 視窗，按 <kbd>A</kbd> 全選預設的方塊、燈光與攝影機，再按 <kbd>Delete</kbd> 刪除，保持場景乾淨。</li>
+      </ol>
+      <label class="check-row"><input type="checkbox"> 已完成：場景已清空</label>
+    </section>
+
+    <section class="step" id="s2" data-step="2">
+      <span class="step-num" aria-hidden="true">2</span>
+      <div class="step-head"><h2>下載與安裝 Blosm 外掛</h2><span class="tag b">Blender</span></div>
+      <p class="goal">地圖圖資神器。</p>
+      <ol class="do">
+        <li>前往 <a href="https://prochitecture.gumroad.com/l/blender-osm" target="_blank" rel="noopener">Gumroad 的 Blosm 頁面</a>，下載 zip 壓縮檔（免費版即可，<strong>不要解壓縮</strong>）。</li>
+        <li>回到 Blender，點選 <span class="path">編輯 Edit › 偏好設定 Preferences › 附加元件 Add-ons</span>。</li>
+        <li>點右上角 <span class="path">安裝 Install</span> 並選取 zip 檔。<br><small>Blender 4.2 以後的版本：按右上角的 <span class="path">▾</span> 下拉選單，選 <span class="path">從磁碟安裝 Install from Disk</span>。</small></li>
+        <li>勾選 Blosm 前面的核取方塊啟用外掛。</li>
+        <li>展開 Blosm 設定，在 <span class="path">Directory</span> 指定一個資料夾，用來存放下載的圖資快取。</li>
+        <li>回到 3D 視窗按 <kbd>N</kbd>，右側出現 <span class="path">Blosm</span> 分頁即代表安裝成功。</li>
+      </ol>
+      <label class="check-row"><input type="checkbox"> 已完成：看得到 Blosm 面板</label>
+    </section>
+
+    <section class="step" id="s3" data-step="3">
+      <span class="step-num" aria-hidden="true">3</span>
+      <div class="step-head"><h2>綁定 Google 3D Tiles API</h2><span class="tag g">Google Cloud</span></div>
+      <p class="goal">獲取實景數據權限。</p>
+      <ol class="do">
+        <li>在 Blosm 面板將資料來源下拉選單切換為 <span class="path">3D Tiles</span>，來源選 Google。</li>
+        <li>點面板上的 <span class="path">Get API Key</span>（或直接前往 <a href="https://console.cloud.google.com/" target="_blank" rel="noopener">Google Cloud Console</a>）。</li>
+        <li>建立專案並設定計費帳戶，接著到 API 程式庫<a href="https://console.cloud.google.com/apis/library/tile.googleapis.com" target="_blank" rel="noopener">啟用 Map Tiles API</a>。</li>
+        <li>在 <span class="path">API 和服務 › 憑證</span> 建立 API 金鑰並複製。</li>
+        <li>把金鑰貼回 Blosm 的 <span class="path">API Key</span> 欄位（部分版本位於外掛偏好設定中）。</li>
+      </ol>
+      <p class="note"><strong>安全提醒：</strong>建議在 Google Cloud 將金鑰限制為只能呼叫 Map Tiles API，並設定每日用量上限，避免金鑰外流產生費用。</p>
+      <label class="check-row"><input type="checkbox"> 已完成：金鑰已填入</label>
+    </section>
+
+    <section class="step" id="s4" data-step="4">
+      <span class="step-num" aria-hidden="true">4</span>
+      <div class="step-head"><h2>匯入地圖與修正視角裁切</h2><span class="tag b">Blender</span></div>
+      <p class="goal">解決畫面邊緣消失的問題。</p>
+      <ol class="do">
+        <li>在 Blosm 面板按 <span class="path">select</span> 開啟地圖，框選目標範圍後貼回座標（Extent）。</li>
+        <li>將 <span class="path">Level of details</span> 設為 <strong>ultimate</strong>，建議勾選 <span class="path">Join 3D Tiles objects</span>，讓所有圖塊合併成單一物件。</li>
+        <li>點 <span class="path">import</span> 匯入，等待下載與組合。</li>
+        <li>若轉動視角時邊緣消失：在右側側邊欄（<kbd>N</kbd>）切到 <span class="path">檢視 View</span> 分頁，修改 <span class="path">剪裁 Clipping</span>：</li>
+      </ol>
+      <div class="table-wrap"><table class="settings">
+        <thead><tr><th>欄位</th><th>設定值</th></tr></thead>
+        <tbody>
+          <tr><td>Clip Start</td><td>0.1 m</td></tr>
+          <tr><td>End</td><td>50000 m</td></tr>
+        </tbody>
+      </table></div>
+      <p class="note"><strong>先小後大：</strong>第一次請從約 1×1 km 的範圍開始測試。範圍太大或精度太高，下載時間與面數都會暴增。</p>
+      <label class="check-row"><input type="checkbox"> 已完成：大範圍地形不再被截斷</label>
+    </section>
+
+    <section class="step" id="s5" data-step="5">
+      <span class="step-num" aria-hidden="true">5</span>
+      <div class="step-head"><h2>固化網格與提取材質</h2><span class="tag b">Blender</span></div>
+      <p class="goal">鎖定高精度細節。</p>
+      <ol class="do">
+        <li>確認 3D 視窗處於高精度顯示狀態，點選地圖模型。</li>
+        <li>到右側 <span class="path">修改器（藍色扳手）</span> 面板，找到 <span class="path">GeometryNodes</span> 修改器，選 <span class="path">套用 Apply</span>（快捷鍵 <kbd>Ctrl</kbd>+<kbd>A</kbd>）固化網格。</li>
+        <li>將頂部工作區切換到 <span class="path">Shading</span> 分頁。</li>
+        <li>在下方節點視窗找到橘色的 <span class="path">Image Texture</span> 節點。</li>
+        <li>在上方圖片編輯器開啟該圖，使用 <span class="path">Image › Save As</span> 另存到桌面，命名為 <code>base_map.jpg</code>。</li>
+      </ol>
+      <p class="note"><strong>多張貼圖的情況：</strong>若圖塊沒有合併，可能出現許多張各自獨立的貼圖。Blosm 的材質無法直接匯出，官方說明提供把材質轉為可匯出版本的功能；Pro 版另有一鍵烘焙成單張貼圖的功能，詳見<a href="https://github.com/vvoovv/blosm/wiki/Import-of-3D-Tiles" target="_blank" rel="noopener">官方文件</a>。</p>
+      <label class="check-row"><input type="checkbox"> 已完成：base_map.jpg 已存到桌面</label>
+    </section>
+
+    <section class="step" id="s6" data-step="6">
+      <span class="step-num" aria-hidden="true">6</span>
+      <div class="step-head"><h2>執行匯出設定</h2><span class="tag b">Blender</span></div>
+      <p class="goal">轉存為通用格式。</p>
+      <ol class="do">
+        <li>選取地圖模型，點 <span class="path">檔案 File › 匯出 Export › Wavefront (.obj)</span> 或 <span class="path">FBX</span>。</li>
+        <li>在右側匯出設定面板中調整以下項目後，點 <span class="path">匯出</span>。</li>
+      </ol>
+      <div class="table-wrap"><table class="settings">
+        <thead><tr><th>設定項目</th><th>設定值</th></tr></thead>
+        <tbody>
+          <tr><td>屬性／評估模式（Properties / Evaluation Mode）</td><td>算圖 Render（不要用視圖區 Viewport）</td></tr>
+          <tr><td>僅限選取的物件（Selected Only）</td><td>勾選</td></tr>
+          <tr><td>套用變換（Apply Transform）</td><td>勾選</td></tr>
+          <tr><td>UV 座標（UV Coordinates）</td><td>勾選（OBJ 預設開啟）</td></tr>
+        </tbody>
+      </table></div>
+      <label class="check-row"><input type="checkbox"> 已完成：模型檔已存到電腦</label>
+    </section>
+
+    <aside class="warning" id="origin" role="note">
+      <h2><span aria-hidden="true">⚠</span>極遠座標當機警告（Far from Origin）</h2>
+      <p>GIS 圖資帶有真實地球座標，匯入 Rhino 時距離原點極遠，會引發嚴重的浮點運算誤差：畫面瘋狂閃爍、破面，甚至無法正常旋轉。</p>
+      <p><strong>匯入 Rhino 後的第一件事：</strong>使用 <code>Move</code> 指令選取整塊基地，將其強制移動到絕對座標 <code>0,0,0</code>，再進行後續步驟。</p>
+    </aside>
+
+    <section class="step" id="s7" data-step="7">
+      <span class="step-num" aria-hidden="true">7</span>
+      <div class="step-head"><h2>Rhino 匯入與網格修復</h2><span class="tag r">Rhino</span></div>
+      <p class="goal">解決破面與黑影。</p>
+      <ol class="do">
+        <li>在 Rhino 使用 <span class="path">檔案 › 匯入</span>（或 <code>Import</code>）匯入剛才的模型。</li>
+        <li><strong>先處理座標：</strong>選取整塊基地，執行 <code>Move</code> 移至 <code>0,0,0</code>。</li>
+        <li>選取網格，在指令欄輸入 <code>ClearAllMeshes</code>，清除錯誤的顯示快取。</li>
+        <li>輸入 <code>Weld</code>，將角度設為 <strong>180</strong>，把分離的頂點黏合平滑。</li>
+        <li>確認原本黑白不均的陰影變得平滑乾淨。</li>
+      </ol>
+      <label class="check-row"><input type="checkbox"> 已完成：陰影平滑、畫面穩定</label>
+    </section>
+
+    <section class="step" id="s8" data-step="8">
+      <span class="step-num" aria-hidden="true">8</span>
+      <div class="step-head"><h2>貼回材質實景色彩</h2><span class="tag r">Rhino</span></div>
+      <p class="goal">完美對位。</p>
+      <ol class="do">
+        <li>將 Rhino 視窗切換至 <span class="path">彩現模式 Rendered</span>。</li>
+        <li>開啟存放 <code>base_map.jpg</code> 的資料夾，把圖片直接拖曳進 3D 視窗，放在地圖模型上。</li>
+        <li>在彈出選項中選擇 <span class="path">材質 Material</span>。</li>
+        <li>對應方式選擇 <span class="path">使用現有的 UV 座標 Use Existing UV Channels</span>。</li>
+      </ol>
+      <p class="note"><strong>完成判斷：</strong>實景色彩準確貼合地形與建築，就大功告成了。</p>
+      <label class="check-row"><input type="checkbox"> 已完成：實景材質對位正確</label>
+    </section>
+
+    <section id="faq">
+      <h2 class="sec">常見問題排除</h2>
+      <details>
+        <summary>匯入時出現 HTTP Error 400 或無法處理 root URI</summary>
+        <p>先確認 Google Cloud 已啟用 Map Tiles API、計費帳戶有效、金鑰沒有被 IP 或 API 限制擋住。仍失敗時檢查防火牆、Proxy 或 VPN；有使用者回報 BlenderKit 外掛會阻擋 Blosm 的連線，可暫時停用測試。</p>
+      </details>
+      <details>
+        <summary>出現 KHR_draco_mesh_compression 相關錯誤</summary>
+        <p>通常是 Blender 版本太舊，請更新到最新穩定版後重新匯入。</p>
+      </details>
+      <details>
+        <summary>Blosm 面板裡找不到 3D Tiles 選項</summary>
+        <p>確認外掛是最新版，並在偏好設定中已指定 Directory 資料夾與填入金鑰；更新後重新啟動 Blender。</p>
+      </details>
+      <details>
+        <summary>轉動視角時地形邊緣一直消失</summary>
+        <p>回到步驟 4，把 View 分頁的 Clip Start 設 0.1 m、End 設 50000 m。</p>
+      </details>
+      <details>
+        <summary>匯出後的模型很粗糙，和 Blender 裡看到的不一樣</summary>
+        <p>匯出時的屬性仍是「視圖區 Viewport」。請改為「算圖 Render」，並確認步驟 5 已套用 GeometryNodes 修改器。</p>
+      </details>
+      <details>
+        <summary>Rhino 中畫面閃爍、破面、無法旋轉</summary>
+        <p>這是極遠座標造成的浮點誤差。用 Move 把整塊基地移到 0,0,0。</p>
+      </details>
+      <details>
+        <summary>Rhino 模型表面黑白斑駁</summary>
+        <p>頂點法線不一致。依序執行 ClearAllMeshes 與 Weld（角度 180）。</p>
+      </details>
+      <details>
+        <summary>貼圖位置錯亂或整片拉伸</summary>
+        <p>拖曳圖片時要選「使用現有的 UV 座標」。若仍錯亂，回到 Blender 確認匯出時有勾選 UV 座標，並檢查是否有多張貼圖（見步驟 5 的說明）。</p>
+      </details>
+      <details>
+        <summary>圖資可以用在正式提案或對外發表嗎？</summary>
+        <p>Google 3D Tiles 受 <a href="https://cloud.google.com/maps-platform/terms" target="_blank" rel="noopener">Google Maps Platform 服務條款</a>約束，包含標示來源與限制快取、再散布等規定。對外使用前請先閱讀條款或與公司內部確認。</p>
+      </details>
+    </section>
+  </main>
+</div>
+
+<footer>Blender 實景地形匯出至 Rhino 操作指南。各軟體介面可能隨版本更新而略有不同，請以官方文件為準。</footer>
+
+<script>
+(function(){
+  var KEY = "terrain-guide-progress";
+  var steps = Array.prototype.slice.call(document.querySelectorAll(".step"));
+  var total = steps.length;
+  var state = {};
+  try { state = JSON.parse(localStorage.getItem(KEY) || "{}") || {}; } catch(e) { state = {}; }
+
+  function save(){ try { localStorage.setItem(KEY, JSON.stringify(state)); } catch(e){} }
+  function render(){
+    var done = 0;
+    steps.forEach(function(s){
+      var id = s.dataset.step, on = !!state[id];
+      s.classList.toggle("is-done", on);
+      s.querySelector("input").checked = on;
+      var link = document.querySelector('.toc a[data-step="'+id+'"]');
+      if (link) link.classList.toggle("done", on);
+      if (on) done++;
+    });
+    var bar = document.getElementById("bar");
+    bar.firstElementChild.style.width = (done/total*100) + "%";
+    bar.setAttribute("aria-valuenow", done);
+    document.getElementById("barText").textContent = done === total ? "全部完成，基地模已就緒" : "已完成 " + done + " / " + total + " 步";
+  }
+  steps.forEach(function(s){
+    s.querySelector("input").addEventListener("change", function(e){
+      state[s.dataset.step] = e.target.checked; save(); render();
+    });
+  });
+  document.getElementById("reset").addEventListener("click", function(){ state = {}; save(); render(); });
+  render();
+})();
+</script>
+</body>
+</html>
