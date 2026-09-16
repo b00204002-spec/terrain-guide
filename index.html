@@ -244,10 +244,13 @@ footer{border-top:1px solid var(--line);padding:1.5rem clamp(1.25rem,4vw,3rem);f
         <li>回到 Blender，點選 <span class="path">編輯 Edit › 偏好設定 Preferences › 附加元件 Add-ons</span>。</li>
         <li>點右上角 <span class="path">安裝 Install</span> 並選取 zip 檔。<br><small>Blender 4.2 以後的版本：按右上角的 <span class="path">▾</span> 下拉選單，選 <span class="path">從磁碟安裝 Install from Disk</span>。</small></li>
         <li>勾選 Blosm 前面的核取方塊啟用外掛。</li>
-        <li>展開 Blosm 設定，在 <span class="path">Directory</span> 指定一個資料夾，用來存放下載的圖資快取。</li>
+        <li>先在電腦建立一個存放圖資快取的資料夾，例如 <code>D:\Blosm_data</code>（路徑盡量避免中文與空格）。</li>
+        <li>展開 Blosm 設定，在 <span class="path">Directory</span> 選取該資料夾。</li>
+        <li>點左下角 <span class="path">☰ › Save Preferences</span> 儲存設定，否則重開 Blender 後會消失。</li>
         <li>回到 3D 視窗按 <kbd>N</kbd>，右側出現 <span class="path">Blosm</span> 分頁即代表安裝成功。</li>
       </ol>
-      <label class="check-row"><input type="checkbox"> 已完成：看得到 Blosm 面板</label>
+      <p class="note"><strong>沒設定資料夾會怎樣？</strong>按 import 時會跳出 <code>The directory for data in the addon preferences doesn't exist</code> 錯誤，無法匯入。</p>
+      <label class="check-row"><input type="checkbox"> 已完成：看得到 Blosm 面板，且 Directory 已設定</label>
     </section>
 
     <section class="step" id="s3" data-step="3">
@@ -271,7 +274,8 @@ footer{border-top:1px solid var(--line);padding:1.5rem clamp(1.25rem,4vw,3rem);f
       <p class="goal">解決畫面邊緣消失的問題。</p>
       <ol class="do">
         <li>在 Blosm 面板按 <span class="path">select</span> 開啟地圖，框選目標範圍後貼回座標（Extent）。</li>
-        <li>將 <span class="path">Level of details</span> 設為 <strong>ultimate</strong>，建議勾選 <span class="path">Join 3D Tiles objects</span>，讓所有圖塊合併成單一物件。</li>
+        <li>在 <span class="path">Settings</span> 將 Source 設為 Google，<span class="path">Level of details</span> 依需求選擇（例如 <strong>buildings with details</strong>；選項名稱依 Blosm 版本不同，舊版可能叫 ultimate）。</li>
+        <li>建議勾選 <span class="path">Join 3D Tiles objects</span>，讓所有圖塊合併成單一物件。</li>
         <li>點 <span class="path">import</span> 匯入，等待下載與組合。</li>
         <li>若轉動視角時邊緣消失：在右側側邊欄（<kbd>N</kbd>）切到 <span class="path">檢視 View</span> 分頁，修改 <span class="path">剪裁 Clipping</span>：</li>
       </ol>
@@ -297,6 +301,12 @@ footer{border-top:1px solid var(--line);padding:1.5rem clamp(1.25rem,4vw,3rem);f
         <li>在下方節點視窗找到橘色的 <span class="path">Image Texture</span> 節點。</li>
         <li>在上方圖片編輯器開啟該圖，使用 <span class="path">Image › Save As</span> 另存到桌面，命名為 <code>base_map.jpg</code>。</li>
       </ol>
+      <aside class="warning" style="margin-bottom:1rem">
+        <h2 style="font-size:1.15rem"><span aria-hidden="true">⚠</span>先確認貼圖有幾張</h2>
+        <p>Google 3D Tiles 由許多圖塊組成，<strong>每個圖塊各有一張衛星照片</strong>。即使勾選 Join，合併後的物件仍保有多個材質（常見數十到上百個）。</p>
+        <p>在 <span class="path">材質屬性（紅色球圖示）</span> 查看材質槽數量：</p>
+        <p>・<strong>只有 1 個材質</strong>：照本步驟另存 base_map.jpg，接步驟 6～8 即可。<br>・<strong>多個材質</strong>：只存一張圖的話，Rhino 只會有一小塊有顏色、其餘全灰。請改走下方 <a href="#python">Python 修復材質＋FBX 內嵌貼圖</a> 流程。</p>
+      </aside>
       <p class="note"><strong>多張貼圖的情況：</strong>若圖塊沒有合併，可能出現許多張各自獨立的貼圖。Blosm 的材質無法直接匯出，官方說明提供把材質轉為可匯出版本的功能；Pro 版另有一鍵烘焙成單張貼圖的功能，詳見<a href="https://github.com/vvoovv/blosm/wiki/Import-of-3D-Tiles" target="_blank" rel="noopener">官方文件</a>。也可以改用下方的 <a href="#python">Python 修復材質＋FBX 內嵌貼圖</a> 流程，一次處理所有貼圖。</p>
       <label class="check-row"><input type="checkbox"> 已完成：base_map.jpg 已存到桌面</label>
     </section>
@@ -316,8 +326,11 @@ footer{border-top:1px solid var(--line);padding:1.5rem clamp(1.25rem,4vw,3rem);f
           <tr><td>僅限選取的物件（Selected Only）</td><td>勾選</td></tr>
           <tr><td>套用變換（Apply Transform）</td><td>勾選</td></tr>
           <tr><td>UV 座標（UV Coordinates）</td><td>勾選（OBJ 預設開啟）</td></tr>
+          <tr><td>Materials › Export（多貼圖時）</td><td>勾選</td></tr>
+          <tr><td>Materials › Path Mode（多貼圖時）</td><td>Copy</td></tr>
         </tbody>
       </table></div>
+      <p class="note"><strong>OBJ 多貼圖注意：</strong>匯出後的 <code>.obj</code>、<code>.mtl</code> 與所有貼圖必須放在同一個資料夾，Rhino 才讀得到。多貼圖情況更推薦用 FBX 內嵌貼圖。</p>
       <label class="check-row"><input type="checkbox"> 已完成：模型檔已存到電腦</label>
     </section>
 
@@ -332,11 +345,13 @@ footer{border-top:1px solid var(--line);padding:1.5rem clamp(1.25rem,4vw,3rem);f
       <div class="step-head"><h2>Rhino 匯入與網格修復</h2><span class="tag r">Rhino</span></div>
       <p class="goal">解決破面與黑影。</p>
       <ol class="do">
+        <li>匯入前先確認 Rhino 右下角的單位。Blender 預設為<strong>公尺</strong>，若 Rhino 檔是公分，比例可能差 100 倍，建議使用公尺樣板，或匯入時留意單位換算提示。</li>
         <li>在 Rhino 使用 <span class="path">檔案 › 匯入</span>（或 <code>Import</code>）匯入剛才的模型。</li>
         <li><strong>先處理座標：</strong>選取整塊基地，執行 <code>Move</code> 移至 <code>0,0,0</code>。</li>
         <li>選取網格，在指令欄輸入 <code>ClearAllMeshes</code>，清除錯誤的顯示快取。</li>
         <li>輸入 <code>Weld</code>，將角度設為 <strong>180</strong>，把分離的頂點黏合平滑。</li>
         <li>確認原本黑白不均的陰影變得平滑乾淨。</li>
+        <li>用 <code>Distance</code> 量一條已知寬度的道路或建築，確認比例正確。</li>
       </ol>
       <label class="check-row"><input type="checkbox"> 已完成：陰影平滑、畫面穩定</label>
     </section>
@@ -352,6 +367,7 @@ footer{border-top:1px solid var(--line);padding:1.5rem clamp(1.25rem,4vw,3rem);f
         <li>對應方式選擇 <span class="path">使用現有的 UV 座標 Use Existing UV Channels</span>。</li>
       </ol>
       <p class="note"><strong>完成判斷：</strong>實景色彩準確貼合地形與建築，就大功告成了。</p>
+      <p class="note"><strong>只有一小塊有顏色、其他全灰？</strong>代表模型有多張貼圖，這一步只補上了其中一張。指令列若顯示 <code>xxx meshes added to selection</code>，數字大約就是貼圖數量。請改用 <a href="#python">FBX 內嵌貼圖流程</a>。</p>
       <label class="check-row"><input type="checkbox"> 已完成：實景材質對位正確</label>
     </section>
 
@@ -422,6 +438,10 @@ footer{border-top:1px solid var(--line);padding:1.5rem clamp(1.25rem,4vw,3rem);f
         <p>先確認 Google Cloud 已啟用 Map Tiles API、計費帳戶有效、金鑰沒有被 IP 或 API 限制擋住。仍失敗時檢查防火牆、Proxy 或 VPN；有使用者回報 BlenderKit 外掛會阻擋 Blosm 的連線，可暫時停用測試。</p>
       </details>
       <details>
+        <summary>按 import 出現「The directory for data in the addon preferences doesn't exist」</summary>
+        <p>Blosm 的快取資料夾沒設定，或資料夾已被刪除、搬移。建立一個資料夾（如 D:\Blosm_data），到 Edit › Preferences › Add-ons › Blosm 的 Directory 選取它，再點左下角 ☰ › Save Preferences。之前失敗留下的空白「Google 3D Tiles.00x」集合可在 Outliner 中刪除。</p>
+      </details>
+      <details>
         <summary>出現 KHR_draco_mesh_compression 相關錯誤</summary>
         <p>通常是 Blender 版本太舊，請更新到最新穩定版後重新匯入。</p>
       </details>
@@ -444,6 +464,14 @@ footer{border-top:1px solid var(--line);padding:1.5rem clamp(1.25rem,4vw,3rem);f
       <details>
         <summary>Rhino 模型表面黑白斑駁</summary>
         <p>頂點法線不一致。依序執行 ClearAllMeshes 與 Weld（角度 180）。</p>
+      </details>
+      <details>
+        <summary>Rhino 裡只有一小塊有實景顏色，其他全是灰色</summary>
+        <p>Google 3D Tiles 每個圖塊各有一張貼圖，合併後仍是多材質（Rhino 匯入時會拆成數十到上百個 mesh）。步驟 5 只另存了其中一張，所以只有對應的那塊有顏色。解法由快到正規：① 跑 Python 修復腳本後匯出 FBX（Path Mode: Copy＋Embed Textures）；② OBJ 勾選 Materials Export、Path Mode: Copy，並把 .obj/.mtl/貼圖放同一資料夾；③ 在 Blender 烘焙成單張貼圖（Blosm Pro 內建，免費版需手動設定 Bake）。</p>
+      </details>
+      <details>
+        <summary>匯入 Rhino 後比例怪怪的（太大或太小）</summary>
+        <p>Blender 預設單位是公尺，Rhino 檔若設為公分會差 100 倍。確認 Rhino 右下角的單位，並用 Distance 量已知尺寸驗證；必要時以 Scale 依原點縮放 100 倍或 0.01 倍。</p>
       </details>
       <details>
         <summary>貼圖位置錯亂或整片拉伸</summary>
