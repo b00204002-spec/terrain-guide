@@ -140,6 +140,21 @@ summary::-webkit-details-marker{display:none}
 summary::after{content:"＋";color:var(--ink-soft);flex-shrink:0}
 details[open] summary::after{content:"－"}
 details p{margin:.5rem 0 0;color:var(--ink-soft)}
+/* python section */
+.routes{display:grid;grid-template-columns:repeat(auto-fit,minmax(16rem,1fr));gap:.75rem;margin:0 0 1.5rem}
+.route-card{background:var(--panel);border:1px solid var(--line);border-top:4px solid var(--c);border-radius:6px;padding:1rem 1.1rem}
+.route-card h3{margin:0 0 .25rem;font-size:1.05rem}
+.route-card .flow{font-weight:700;color:var(--c);font-size:.9rem;margin:0 0 .4rem}
+.route-card p{margin:0;font-size:.93rem;color:var(--ink-soft);line-height:1.65}
+h3.sub{font-family:var(--serif);font-weight:900;font-size:1.3rem;margin:2rem 0 .5rem}
+.code{position:relative;margin:.5rem 0 1.25rem;border-radius:8px;background:#16262A;border:1px solid #2C4246}
+.code-bar{display:flex;justify-content:space-between;align-items:center;padding:.4rem .6rem .4rem 1rem;border-bottom:1px solid #2C4246;color:#9DB5AE;font-size:.8rem}
+.copy{font:inherit;font-size:.8rem;font-weight:700;background:#24393D;color:#E4ECE6;border:1px solid #3A5357;border-radius:5px;padding:.2rem .7rem;cursor:pointer}
+.copy:hover{background:#2F4A4F}
+.code pre{margin:0;padding:1rem 1.1rem;overflow-x:auto;font-family:"SFMono-Regular",Consolas,"Noto Sans TC",monospace;font-size:.85rem;line-height:1.65;color:#E4ECE6;tab-size:4}
+.code .c{color:#8FB39A;font-style:italic}
+.code .s{color:#F2C27B}
+.code .k{color:#8EC5F0;font-weight:700}
 footer{border-top:1px solid var(--line);padding:1.5rem clamp(1.25rem,4vw,3rem);font-size:.85rem;color:var(--ink-soft);text-align:center}
 </style>
 </head>
@@ -181,6 +196,7 @@ footer{border-top:1px solid var(--line);padding:1.5rem clamp(1.25rem,4vw,3rem);f
       <li class="extra"><a href="#origin"><span class="n">!</span>極遠座標警告</a></li>
       <li><a href="#s7" data-step="7"><span class="n">7</span>Rhino 匯入與修復</a></li>
       <li><a href="#s8" data-step="8"><span class="n">8</span>貼回實景材質</a></li>
+      <li class="extra"><a href="#python"><span class="n">Py</span>進階：Python 修復材質</a></li>
       <li class="extra"><a href="#faq"><span class="n">?</span>常見問題排除</a></li>
     </ol>
     <button class="reset" id="reset" type="button">清除勾選進度</button>
@@ -281,7 +297,7 @@ footer{border-top:1px solid var(--line);padding:1.5rem clamp(1.25rem,4vw,3rem);f
         <li>在下方節點視窗找到橘色的 <span class="path">Image Texture</span> 節點。</li>
         <li>在上方圖片編輯器開啟該圖，使用 <span class="path">Image › Save As</span> 另存到桌面，命名為 <code>base_map.jpg</code>。</li>
       </ol>
-      <p class="note"><strong>多張貼圖的情況：</strong>若圖塊沒有合併，可能出現許多張各自獨立的貼圖。Blosm 的材質無法直接匯出，官方說明提供把材質轉為可匯出版本的功能；Pro 版另有一鍵烘焙成單張貼圖的功能，詳見<a href="https://github.com/vvoovv/blosm/wiki/Import-of-3D-Tiles" target="_blank" rel="noopener">官方文件</a>。</p>
+      <p class="note"><strong>多張貼圖的情況：</strong>若圖塊沒有合併，可能出現許多張各自獨立的貼圖。Blosm 的材質無法直接匯出，官方說明提供把材質轉為可匯出版本的功能；Pro 版另有一鍵烘焙成單張貼圖的功能，詳見<a href="https://github.com/vvoovv/blosm/wiki/Import-of-3D-Tiles" target="_blank" rel="noopener">官方文件</a>。也可以改用下方的 <a href="#python">Python 修復材質＋FBX 內嵌貼圖</a> 流程，一次處理所有貼圖。</p>
       <label class="check-row"><input type="checkbox"> 已完成：base_map.jpg 已存到桌面</label>
     </section>
 
@@ -337,6 +353,66 @@ footer{border-top:1px solid var(--line);padding:1.5rem clamp(1.25rem,4vw,3rem);f
       </ol>
       <p class="note"><strong>完成判斷：</strong>實景色彩準確貼合地形與建築，就大功告成了。</p>
       <label class="check-row"><input type="checkbox"> 已完成：實景材質對位正確</label>
+    </section>
+
+    <section id="python">
+      <h2 class="sec">進階：用 Python 修復材質並匯出 FBX</h2>
+      <p>要走哪條路，取決於你現在的工作階段與目的。先選路徑：</p>
+      <div class="routes">
+        <div class="route-card" style="--c:var(--rhino)">
+          <p class="flow">路徑一｜Blender 基地 → Rhino 設計</p>
+          <h3>當作設計底圖</h3>
+          <p>需要 Google 實景模型在 Rhino 裡當背景，做建築量體推敲或出圖。本段的 Python 腳本就是為這條路徑準備的。</p>
+        </div>
+        <div class="route-card" style="--c:var(--blender)">
+          <p class="flow">路徑二｜Rhino 設計 → Blender 渲染</p>
+          <h3>做影片或效果圖</h3>
+          <p>如果目的是渲染，把 Rhino 模型匯進 Blender 通常更快、效果也更好，實景地形不必離開 Blender。</p>
+        </div>
+      </div>
+
+      <h3 class="sub">路徑一：一鍵修復 Blosm 材質</h3>
+      <p>Blosm 抓下來的模型常用 <code>Emission</code>（發光）節點顯示貼圖，這會讓 FBX 匯出後沒有貼圖。下方腳本會把所有選取物件的材質改接到標準的 <code>Principled BSDF</code>，匯出 FBX 給 Rhino 時就會帶著貼圖。</p>
+      <ol class="do">
+        <li>完成步驟 4、5 的匯入與「套用 GeometryNodes 修改器」。</li>
+        <li>頂部工作區切到 <span class="path">Scripting</span> 分頁，點 <span class="path">＋ New</span> 建立新文字檔。</li>
+        <li>貼上下方程式碼。</li>
+        <li>回到 3D 視窗選取所有地圖模型，再回到 Scripting 按 <span class="path">▶ Run Script</span>（或 <kbd>Alt</kbd>+<kbd>P</kbd>）。</li>
+        <li>到 <span class="path">Window › Toggle System Console</span> 查看「材質修復完成」訊息（Windows）。</li>
+      </ol>
+
+      <div class="code">
+        <div class="code-bar"><span>fix_blosm_materials.py</span><button class="copy" type="button" data-target="py-code">複製程式碼</button></div>
+        <pre><code id="py-code"></code></pre>
+      </div>
+      <p class="note"><strong>版本相容：</strong>Blender 4.0 起 Principled BSDF 的「Specular」改名為「Specular IOR Level」，腳本會自動判斷，新舊版本都能執行。</p>
+
+      <h3 class="sub">路徑一：匯出 FBX 並帶入 Rhino</h3>
+      <ol class="do">
+        <li>保持地圖模型選取狀態，點 <span class="path">File › Export › FBX (.fbx)</span>。</li>
+        <li>依下表設定後按 <span class="path">Export FBX</span>。</li>
+      </ol>
+      <div class="table-wrap"><table class="settings">
+        <thead><tr><th>設定項目</th><th>設定值</th></tr></thead>
+        <tbody>
+          <tr><td>Limit to › Selected Objects</td><td>勾選</td></tr>
+          <tr><td>Path Mode</td><td>Copy</td></tr>
+          <tr><td>Embed Textures（Path Mode 右側的小方塊圖示）</td><td>按下開啟</td></tr>
+          <tr><td>Geometry › Apply Modifiers</td><td>勾選</td></tr>
+        </tbody>
+      </table></div>
+      <ol class="do" start="3">
+        <li>在 Rhino 執行 <code>Import</code> 匯入 FBX。</li>
+        <li>先依<a href="#origin">極遠座標警告</a>用 <code>Move</code> 移到 <code>0,0,0</code>，再做步驟 7 的網格修復。</li>
+        <li>切到 <span class="path">彩現模式 Rendered</span>，即可看到內嵌的貼圖，不必再手動拖曳 base_map.jpg。</li>
+      </ol>
+
+      <h3 class="sub">路徑二：Rhino 模型匯進 Blender 渲染</h3>
+      <ol class="do">
+        <li>在 Rhino 把設計量體移到與基地一致的參考點，單位設為公尺。</li>
+        <li>匯出成 FBX 或 OBJ；或在 Blender 安裝 <a href="https://github.com/jesterKing/import_3dm" target="_blank" rel="noopener">import_3dm 外掛</a>，直接讀取 <code>.3dm</code>。</li>
+        <li>在已有 Blosm 地形的 Blender 場景中匯入模型，對齊位置後即可設定燈光與攝影機進行渲染。</li>
+      </ol>
     </section>
 
     <section id="faq">
@@ -414,6 +490,96 @@ footer{border-top:1px solid var(--line);padding:1.5rem clamp(1.25rem,4vw,3rem);f
   });
   document.getElementById("reset").addEventListener("click", function(){ state = {}; save(); render(); });
   render();
+})();
+</script>
+<script type="text/plain" id="py-src">import bpy
+
+
+def set_input(node, names, value):
+    # 依序嘗試不同版本的輸入名稱，找到就設定
+    for name in names:
+        if name in node.inputs:
+            node.inputs[name].default_value = value
+            return
+
+
+def fix_blosm_materials():
+    # 只處理選取中的網格物件
+    objs = [o for o in bpy.context.selected_objects if o.type == 'MESH']
+    if not objs:
+        print("請先選取 Blosm 模型物件！")
+        return
+
+    done = set()
+    for obj in objs:
+        for mat in obj.data.materials:
+            if not mat or not mat.use_nodes or mat.name in done:
+                continue
+            done.add(mat.name)
+
+            nodes = mat.node_tree.nodes
+            links = mat.node_tree.links
+
+            # 1. 尋找關鍵節點
+            output = next((n for n in nodes if n.type == 'OUTPUT_MATERIAL'), None)
+            image = next((n for n in nodes if n.type == 'TEX_IMAGE'), None)
+            if not (output and image):
+                continue
+
+            # 2. 沒有 Principled BSDF 就新增一個
+            bsdf = next((n for n in nodes if n.type == 'BSDF_PRINCIPLED'), None)
+            if bsdf is None:
+                bsdf = nodes.new('ShaderNodeBsdfPrincipled')
+                bsdf.location = (output.location.x - 300, output.location.y)
+
+            # 3. 移除所有 Emission 節點（Blosm 預設：Image -> Emission）
+            for n in [n for n in nodes if n.type == 'EMISSION']:
+                nodes.remove(n)
+
+            # 4. 重新連線：Image -> Base Color，BSDF -> Surface
+            links.new(image.outputs['Color'], bsdf.inputs['Base Color'])
+            links.new(bsdf.outputs['BSDF'], output.inputs['Surface'])
+
+            # 5. 消除塑膠感反光（4.0 起名稱為 Specular IOR Level）
+            set_input(bsdf, ['Roughness'], 1.0)
+            set_input(bsdf, ['Specular IOR Level', 'Specular'], 0.0)
+
+    print(f"材質修復完成，共處理 {len(done)} 個材質。現在可以匯出 FBX。")
+
+
+fix_blosm_materials()
+</script>
+<script>
+(function(){
+  var src = document.getElementById("py-src").textContent.replace(/^\n/, "");
+  var el = document.getElementById("py-code");
+  function esc(t){ return t.replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;"); }
+  var kw = /\b(import|def|for|in|if|not|or|and|return|continue|is|None|print)\b/g;
+  el.innerHTML = src.split("\n").map(function(line){
+    var i = line.indexOf("#");
+    var code = i >= 0 ? line.slice(0,i) : line;
+    var com = i >= 0 ? line.slice(i) : "";
+    var parts = code.split(/(f?"[^"]*"|'[^']*')/);
+    var out = parts.map(function(p, idx){
+      if (idx % 2 === 1) return '<span class="s">' + esc(p) + '</span>';
+      return esc(p).replace(kw, '<span class="k">$1</span>');
+    }).join("");
+    return out + (com ? '<span class="c">' + esc(com) + '</span>' : "");
+  }).join("\n");
+  document.querySelectorAll(".copy").forEach(function(btn){
+    btn.addEventListener("click", function(){
+      var done = function(){ btn.textContent = "已複製 ✓"; setTimeout(function(){ btn.textContent = "複製程式碼"; }, 1800); };
+      var fallback = function(){
+        var r = document.createRange(); r.selectNodeContents(el);
+        var sel = window.getSelection(); sel.removeAllRanges(); sel.addRange(r);
+        btn.textContent = "已選取，請按 Ctrl+C";
+      };
+      try {
+        if (navigator.clipboard) { navigator.clipboard.writeText(src).then(done, fallback); }
+        else { fallback(); }
+      } catch(e) { fallback(); }
+    });
+  });
 })();
 </script>
 </body>
